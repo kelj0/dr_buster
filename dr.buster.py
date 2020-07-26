@@ -12,7 +12,7 @@ from multiprocessing import cpu_count, Process
 CPU_CORES = cpu_count()
 WORD_LISTS = []
 WORDLIST_PATH = "./words.txt"
-URL = ""
+URL = "http://localhost:5000"
 SSL_SUPPORTED = True
 
 def get_code(host, port, path):
@@ -133,7 +133,6 @@ def write_to_report(finding):
 if __name__ == '__main__':
     print("Starting Dr.buster..")
     start_time = time()
-    URL = "http://localhost:5000/"
     start_scan(URL)
     end_time = time()
     print()
