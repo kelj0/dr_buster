@@ -13,7 +13,7 @@ and generates report dr.buster.report.$datetime$
 ### Test it out on testserver
 ```
 $ pip3 install flask
-$ export FLASK_APP=server.py
+$ export FLASK_APP=testserver.py
 $ python3 -m flask run
 
 and run dr.buster in another terminal
@@ -21,7 +21,7 @@ and run dr.buster in another terminal
 
 
 ## TODO:
-* [ ] - add argsparse
-
+* [x] - add argsparse
+* [ ] - add support for dirbusting on specific path
 
 ##### DISCLAMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION

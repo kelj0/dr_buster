@@ -1,18 +1,18 @@
-import itertools
+import itertools, argparse
 from socket import socket, gaierror
 from socket import AF_INET, SOCK_STREAM
 from ssl import wrap_socket, SSLError
 from ssl import PROTOCOL_TLSv1
 from time import time
 from datetime import datetime
-from sys import exit
+from sys import exit, argv
 from os.path import exists
 from multiprocessing import cpu_count, Process
 
 CPU_CORES = cpu_count()
 WORD_LISTS = []
-WORDLIST_PATH = "./words.txt"
-URL = "http://localhost:5000"
+WORDLIST_PATH = ""
+URL = ""
 SSL_SUPPORTED = True
 
 def get_code(host, port, path):
@@ -131,11 +131,20 @@ def write_to_report(finding):
         f.write(finding)
 
 if __name__ == '__main__':
-    print("Starting Dr.buster..")
+    p = argparse.ArgumentParser()
+    p.add_argument("url", help="Url of web page you want to scan")
+    p.add_argument("wordlist", help="Path to wordlist")
+    if len(argv) != 3:
+        p.print_help()
+        exit(1)
+    a = p.parse_args()
+    URL=a.url
+    WORDLIST_PATH=a.wordlist
+    print("Starting Dr.buster..\nURL: %s \nWORDLIST: %s" % (URL, WORDLIST_PATH))
     start_time = time()
     start_scan(URL)
     end_time = time()
     print()
-    print("Scanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
+    print("\nScanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
 
 
