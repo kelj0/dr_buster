@@ -9,7 +9,7 @@ from sys import exit, argv
 from os.path import exists
 from multiprocessing import cpu_count, Process
 
-CPU_CORES = cpu_count() * 16
+PROCESSES_COUNT = 32 if cpu_count() <= 4 else 64
 WORD_LISTS = []
 WORDLIST_PATH = ""
 URL = ""
@@ -89,17 +89,17 @@ def prepare_wordlists(path):
         exit(1)
     
     print("Loaded %s words" % (len(lines), ))
-    words_per_process = int(len(lines)/CPU_CORES)
+    words_per_process = int(len(lines)/PROCESSES_COUNT)
     start = 0
-    print("Detected %s cores on this system" % (CPU_CORES, ) )
+    print("Detected %s cores on this system" % (PROCESSES_COUNT, ) )
     print("Loading %s words per process" % (words_per_process, ))
-    for c in range(CPU_CORES):
-        if c == CPU_CORES - 1:
+    for p in range(PROCESSES_COUNT):
+        if p == PROCESSES_COUNT - 1:
             WORD_LISTS.append(lines[start:])
         else:
             WORD_LISTS.append(lines[start:start+words_per_process])
         start+=words_per_process
-        print("process %s ready, loaded %s words" % (c+1, len(WORD_LISTS[c])))
+        print("process %s ready, loaded %s words" % (p+1, len(WORD_LISTS[p])))
 
 def scan_host(host, port, wordlist, process_id=None):
     for n, word in enumerate(wordlist):
