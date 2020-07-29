@@ -2,14 +2,14 @@ import itertools, argparse
 from socket import socket, gaierror
 from socket import AF_INET, SOCK_STREAM
 from ssl import wrap_socket, SSLError
-from ssl import PROTOCOL_TLSv1
+from ssl import PROTOCOL_TLSv1_2
 from time import time
 from datetime import datetime
 from sys import exit, argv
 from os.path import exists
 from multiprocessing import cpu_count, Process
 
-CPU_CORES = cpu_count()
+CPU_CORES = cpu_count() * 16
 WORD_LISTS = []
 WORDLIST_PATH = ""
 URL = ""
@@ -20,14 +20,16 @@ def get_code(host, port, path):
     s = socket(AF_INET, SOCK_STREAM)
     response = None
     if SSL_SUPPORTED:
-        s = wrap_socket(s, ssl_version=PROTOCOL_TLSv1)
+        s = wrap_socket(s, ssl_version=PROTOCOL_TLSv1_2)
     try:
         s.connect((host, port))
     except (gaierror, TimeoutError):
         print("Name or service not known!")
         exit(1)
     except SSLError:
-        print("%s doesnt seem to support TLSv1. \nI'm trying http..." % (url, ))
+        print(
+                "%s doesnt seem to support TLSv1. \nI'm trying http..."
+                % ("https://"+ host + ":" + port + "/" + path, ))
         s = socket(AF_INET, SOCK_STREAM)
         try:
             s.connect((host, port))
