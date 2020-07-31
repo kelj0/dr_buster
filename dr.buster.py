@@ -111,9 +111,9 @@ def scan_host(host, port, wordlist, process_id=None):
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, word, code))
             write_to_report(finding)
         if process_id:
-            print("PROCESS [%s] - scanning %s:%s/%s\r" % (process_id, host, port, word), end="")
+            print("PROCESS [%s] - scanning %s:%s/%s\r              " % (process_id, host, port, word), end="")
         else:
-            print("Scanning %s\r" % (url+word, ), end="")
+            print("Scanning %s\r              " % (url+word, ), end="")
 
 def start_scan(url):
     print("Starting scan on %s.." % (url,))
