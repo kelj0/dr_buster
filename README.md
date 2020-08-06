@@ -22,6 +22,6 @@ and run dr.buster in another terminal
 
 ## TODO:
 * [x] - add argsparse
-* [ ] - add support for dirbusting on specific path
+* [x] - add support for dirbusting on specific path
 
 ##### DISCLAMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION

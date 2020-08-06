@@ -14,6 +14,7 @@ WORD_LISTS = []
 WORDLIST_PATH = ""
 URL = ""
 SSL_SUPPORTED = True
+TIME = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
 
 def get_code(host, port, path):
     global SSL_SUPPORTED
@@ -54,6 +55,7 @@ def parse_url(url):
     print("Validating url %s" % (url, ))
     host = None
     port = None
+    path = ""
     if not url.endswith('/'):
         url+="/"
     try:
@@ -69,6 +71,7 @@ def parse_url(url):
         else:
             host = url.split("/")[0]
             port = 443 if https else 80
+        path = '/'.join(url.split('/')[1:])
     except Exception:
         print("Cant parse url!")
         exit(1)
@@ -76,7 +79,7 @@ def parse_url(url):
     print("Initial GET to see if host is up") 
     get_code(host, port, ".")
     print("[OK]")
-    return (host, port)
+    return (host, port, path)
 
 def prepare_wordlists(path):
     global WORD_LISTS
@@ -101,34 +104,34 @@ def prepare_wordlists(path):
         start+=words_per_process
         print("process %s ready, loaded %s words" % (p+1, len(WORD_LISTS[p])))
 
-def scan_host(host, port, wordlist, process_id=None):
-    for n, word in enumerate(wordlist):
-        code = get_code(host, port, word)
+def scan_host(host, port, wordlist, process_id=None, path=""):
+    for word in wordlist:
+        code = get_code(host, port, path+word)
         if code != 404:
-            print("%s:%s/%s returned [%s]!                \r" 
-                    % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, word, code))
-            finding = ("%s:%s/%s [%s]\n"
-                    % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, word, code))
+            print("%s:%s%s/%s returned [%s]!                \r" 
+                    % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
+            finding = ("%s:%s%s/%s [%s]\n"
+                    % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             write_to_report(finding)
         if process_id:
-            print("PROCESS [%s] - scanning %s:%s/%s\r              " % (process_id, host, port, word), end="")
+            print("PROCESS [%s] - scanning %s:%s/%s%s             \r" % (process_id, host, port, path, word), end="")
         else:
-            print("Scanning %s\r              " % (url+word, ), end="")
+            print("Scanning %s:%s/%s%s             \r" % (host, port, path, word), end="")
 
 def start_scan(url):
     print("Starting scan on %s.." % (url,))
-    host, port = parse_url(URL)
+    host, port, path = parse_url(URL)
     prepare_wordlists(WORDLIST_PATH)
     procs = []
     for n, wordlist in enumerate(WORD_LISTS):
-        procs.append(Process(target=scan_host, args=(host, port, wordlist, n+1)))
+        procs.append(Process(target=scan_host, args=(host, port, wordlist, n+1, path)))
     for p in procs:
         p.start()
     for p in procs:
         p.join()
 
 def write_to_report(finding):
-    fname = "./dr.buster.report."+datetime.now().strftime("%d.%m.%Y_%H")
+    fname = "./dr.buster.report."+TIME
     with open(fname, "a") as f:
         f.write(finding)
 
