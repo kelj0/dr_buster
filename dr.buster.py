@@ -1,8 +1,6 @@
 import itertools, argparse
-from socket import socket, gaierror
-from socket import AF_INET, SOCK_STREAM
-from ssl import wrap_socket, SSLError
-from ssl import PROTOCOL_TLSv1_2
+from socket import socket, gaierror, AF_INET, SOCK_STREAM
+from ssl import wrap_socket, SSLError, PROTOCOL_TLSv1_2
 from time import time
 from datetime import datetime
 from sys import exit, argv
