@@ -92,7 +92,7 @@ def prepare_wordlists(path):
     print("Loaded %s words" % (len(lines), ))
     words_per_process = int(len(lines)/PROCESSES_COUNT)
     start = 0
-    print("Detected %s cores on this system" % (PROCESSES_COUNT, ) )
+    print("Detected %s cores on this system, starting %s processes" % (cpu_count(), PROCESSES_COUNT ))
     print("Loading %s words per process" % (words_per_process, ))
     for p in range(PROCESSES_COUNT):
         if p == PROCESSES_COUNT - 1:
