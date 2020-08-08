@@ -4,11 +4,14 @@ Simple, yet effective web path finder implemented with multiprocessing in Python
 
 ### Usage
 ```
-$ python3 dr.buster.py
+$ python3 dr.buster.py https://example.com /home/user/wordlist.txt
 
-starts scan on url http://localhost:5000 with wordlist ./words.txt
+starts scan on example.com with wordlist wordlist.txt
 and generates report dr.buster.report.$datetime$
 ```
+
+##### Example output when started with words.txt on testserver
+![alt text](res/usage.png)
 
 ### Test it out on testserver
 ```
@@ -19,8 +22,7 @@ $ python3 -m flask run
 and run dr.buster in another terminal
 ```
 
-
-## TODO:
+## ~~TODO:~~
 * [x] - add argsparse
 * [x] - add support for dirbusting on specific path
 
