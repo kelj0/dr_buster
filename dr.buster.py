@@ -47,6 +47,9 @@ def get_code(host, port, path):
     except ConnectionRefusedError:
         print("Host seems down..")
         exit(1)
+    
+    if path.endswith("\n"):
+        path = path.rstrip("\n")
 
     request = "GET /%s HTTP/1.1\r\nHost:%s\r\n\r\n" % (path,host)
     s.send(request.encode())  
@@ -58,6 +61,7 @@ def get_code(host, port, path):
 def parse_url(url):
     global SSL_SUPPORTED, NOT_FOUND_CODE
     print("Validating url %s" % (url, ))
+    https = False
     host = None
     port = None
     path = ""
@@ -95,7 +99,11 @@ def prepare_wordlists(path):
     lines = []
     print("Loading words from %s" % (path,))
     if exists(path):
-        lines = [line.rstrip() for line in open(path)]
+        try:
+            lines = [line.rstrip() for line in open(path)]
+        except Exception as e:
+            print("ERR: problems parsing wordlist")
+            exit(1)
     else:
         print("ERR: wordlist not found!")
         exit(1)
@@ -111,28 +119,28 @@ def prepare_wordlists(path):
         else:
             WORD_LISTS.append(lines[start:start+words_per_process])
         start+=words_per_process
-    print("Done")
 
 def scan_host(host, port, wordlist, process_id=None, path=""):
     for word in wordlist:
-        code = get_code(host, port, path+word)
+        try:
+            code = get_code(host, port, path+word)
+        except Exception:
+            print(host,port,path,word)
+            exit(1)
         if code != NOT_FOUND_CODE:
             print("%s:%s%s/%s returned [%s]!                \r" 
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             finding = ("%s:%s%s/%s [%s]\n"
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             write_to_report(finding)
-        if process_id:
-            print("PROCESS [%s] - scanning %s:%s/%s%s             \r" % (process_id, host, port, path, word), end="")
-        else:
-            print("Scanning %s:%s/%s%s             \r" % (host, port, path, word), end="")
 
 def start_scan(url, wordlist_path):
+    global WORD_LISTS
     print("Starting scan on %s.." % (url,))
     host, port, path = parse_url(URL)
     prepare_wordlists(wordlist_path)
     procs = []
-    for n, wordlist in enumerate(wordlist_path):
+    for n, wordlist in enumerate(WORD_LISTS):
         procs.append(Process(target=scan_host, args=(host, port, wordlist, n+1, path)))
     for p in procs:
         p.start()
