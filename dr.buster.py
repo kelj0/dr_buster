@@ -21,6 +21,10 @@ def get_code(host, port, path):
     global SSL_SUPPORTED
     s = socket(AF_INET, SOCK_STREAM)
     response = None
+    
+    if path.startswith("/"):
+        path = path.lstrip('/')
+    
     if SSL_SUPPORTED:
         s = wrap_socket(s, ssl_version=PROTOCOL_TLSv1_2)
     try:
@@ -31,7 +35,7 @@ def get_code(host, port, path):
     except SSLError:
         print(
                 "%s doesnt seem to support TLSv1. \nI'm trying http..."
-                % ("https://"+ host + ":" + port + "/" + path, ))
+                % ("https://"+ host + ":" + str(port) + "/" + path, ))
         s = socket(AF_INET, SOCK_STREAM)
         try:
             s.connect((host, port))
@@ -107,7 +111,7 @@ def prepare_wordlists(path):
         else:
             WORD_LISTS.append(lines[start:start+words_per_process])
         start+=words_per_process
-        print("process %s ready, loaded %s words" % (p+1, len(WORD_LISTS[p])))
+    print("Done")
 
 def scan_host(host, port, wordlist, process_id=None, path=""):
     for word in wordlist:
