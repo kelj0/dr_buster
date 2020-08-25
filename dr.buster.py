@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import itertools, argparse
 from socket import socket, gaierror, AF_INET, SOCK_STREAM
 from ssl import wrap_socket, SSLError, PROTOCOL_TLSv1_2
