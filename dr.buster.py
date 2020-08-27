@@ -137,7 +137,7 @@ def scan_host(host, port, wordlist, process_id=None, path=""):
 def start_scan(url, wordlist_path):
     global WORD_LISTS
     print("Starting scan on %s.." % (url,))
-    host, port, path = parse_url(URL)
+    host, port, path = parse_url(url)
     prepare_wordlists(wordlist_path)
     procs = []
     for n, wordlist in enumerate(WORD_LISTS):
