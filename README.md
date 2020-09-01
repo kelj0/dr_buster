@@ -59,8 +59,10 @@ $ python3 -m flask run
 and run dr.buster in another terminal
 ```
 
-## ~~TODO:~~
+## TODO:
 * [x] - add argsparse
 * [x] - add support for dirbusting on specific path
+* [ ] - create C++ version of dr.buster
 
 ##### DISCLAMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION
+
