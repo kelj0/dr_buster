@@ -1,51 +1,46 @@
 # dr.buster
-Simple, yet effective web path finder implemented with multiprocessing in Python
+Simple, yet effective web path finder with Python API and C++ core.
 
-### Module usage
-To use it as module please rename dr.buster.py to dr_buster.py or something that wont be problematic to python interpreter
-Then you can
+## Getting started
+Simplest way to get dr.buster is to install it using pip:
+
+```bash
+python3 -m pip install dr_buster
+```
+
+Alternatively to install it from the source see the instructions bellow.
+
+Once the module is installed you can run the scan by importing the module and calling the scan function:
 
 ```py
-from dr_buster import start_scan
+from dr_buster.core import start_scan
 
 start_scan(url, wordlist_path)
 ```
-You will have a report generated after program finishes and you can parse it easy cause url and code is in `url [code]` format
+
+Output in in `url [code]` format will be generated when program finishes.
 
 ### CLI usage
+Following CLI example starts a scan on example.com with word list found in `/home/user/wordlist.txt`
+and generates report `dr.buster.report.$datetime$` in the current working directory.
+
+
 ```
-$ python3 dr.buster.py https://example.com /home/user/wordlist.txt
-
-starts scan on example.com with wordlist wordlist.txt
-and generates report dr.buster.report.$datetime$
+$ python3 -m dr_buster https://example.com /home/user/wordlist.txt
 ```
 
-##### Example output when started with words.txt on testserver
-![alt text](res/usage.png)
 
-##### Sample report
+*Example output when started with words.txt on testserver*
+
+![example output screenshot](res/usage.png)
+
+
+*Sample report*
 ```
 user@hostname:~/dr.buster$ cat dr.buster.report.09-08-2020_10-54-28 
 http://localhost:5000/900 [200]
 http://localhost:5000/623 [200]
-http://localhost:5000/500 [200]
-http://localhost:5000/130 [200]
-http://localhost:5000/904 [200]
-http://localhost:5000/100 [200]
-http://localhost:5000/504 [200]
-http://localhost:5000/102 [200]
-http://localhost:5000/103 [200]
-http://localhost:5000/104 [200]
-http://localhost:5000/600 [200]
-http://localhost:5000/105 [200]
-http://localhost:5000/200 [200]
-http://localhost:5000/604 [200]
-http://localhost:5000/700 [200]
-http://localhost:5000/300 [200]
-http://localhost:5000/703 [200]
-http://localhost:5000/303 [200]
-http://localhost:5000/800 [200]
-http://localhost:5000/120 [200]
+...
 http://localhost:5000/770 [200]
 http://localhost:5000/400 [200]
 ```
@@ -53,16 +48,65 @@ http://localhost:5000/400 [200]
 ### Test it out on testserver
 ```
 $ pip3 install flask
-$ export FLASK_APP=testserver.py
+$ export FLASK_APP=tests/testserver.py
 $ python3 -m flask run
-
+```
 and run dr.buster in another terminal
+
+
+## Installing from the source
+### Prerequisites
+
+<!-- **On Linux** -->
+
+* A compiler with C++11 support
+* CMake >= 2.8.12
+
+<!-- **On Windows**
+
+* Visual Studio 2015 (required for all Python versions, see notes below)
+* CMake >= 3.1 -->
+
+
+### Installation
+
+Recursively clone this repository and run pip install. 
+
+```
+git clone --recursive https://github.com/kelj0/dr.buster.git
+pip install ./dr_buster
 ```
 
+With the `setup.py` file included in this project, the `pip install` command will
+invoke CMake and build the C++ module as specified in `CMakeLists.txt`.
+
+
+<!-- ## Special notes for Windows
+
+**Compiler requirements**
+
+dr.buster requires a C++11 compliant compiler, i.e Visual Studio 2015 on Windows.
+This applies to all Python versions, including 2.7. Unlike regular C extension
+modules, it's perfectly fine to compile a dr.buster module with a VS version newer
+than the target Python's VS version.
+
+**Runtime requirements**
+
+The Visual C++ 2015 redistributable packages are a runtime requirement for this
+project. It can be found [here][vs2015_runtime]. -->
+
+
+## License
+
+dr.buster is provided under a MIT license that can be found in the LICENSE
+file. By using, distributing, or contributing to this project, you agree to the
+terms and conditions of this license.
+
+
 ## TODO:
-* [x] - add argsparse
-* [x] - add support for dirbusting on specific path
-* [ ] - create C++ version of dr.buster
+* [-] - create C++ version of dr.buster
+* [ ] - output reports to cwd
+* [ ] - argsparse option to specify where to output reports
 
-##### DISCLAMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION
 
+##### DISCLAIMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION
