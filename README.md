@@ -73,7 +73,7 @@ and run dr.buster in another terminal
 Recursively clone this repository and run pip install. 
 
 ```
-git clone --recursive https://github.com/kelj0/dr.buster.git
+git clone --recursive https://github.com/kelj0/dr_buster.git
 pip install ./dr_buster
 ```
 
