@@ -18,7 +18,7 @@ from dr_buster.core import start_scan
 start_scan(url, wordlist_path)
 ```
 
-Output in in `url [code]` format will be generated when program finishes.
+Output in `url [code]` format will be generated when program finishes.
 
 ### CLI usage
 Following CLI example starts a scan on example.com with word list found in `/home/user/wordlist.txt`
