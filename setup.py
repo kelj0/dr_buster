@@ -70,7 +70,7 @@ kwargs = dict(
     author_email='kegljevickarlo@protonmail.com',
     description='Web path finder',
     long_description='',
-    ext_modules=[CMakeExtension('dr_buster._core')],
+    #ext_modules=[CMakeExtension('dr_buster._core')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     packages=['dr_buster']
