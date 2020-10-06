@@ -1,6 +1,9 @@
-#include <iostream>
 #include <fstream>
-#include <string>
+#include <stdio.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
+#include <unistd.h> 
+#include <string.h> 
 
 #include <pybind11/pybind11.h>
 
@@ -8,7 +11,39 @@ int get_code(std::string host, int port, std::string path){
     // <summary>
     // makes GET request to the host:port/path and returns status code
     // </summary>
-    return NULL;
+    int sock = 0; 
+    struct sockaddr_in serv_addr; 
+    char buffer[14] = {0}; 
+    const char* request = "GET / HTTP/1.1\r\nHost:kelj0.com\r\n\r\n";
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+   
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(80); 
+    if(inet_pton(AF_INET, "46.101.220.126", &serv_addr.sin_addr)<=0) { 
+        printf("\nInvalid address/Address not supported \n"); 
+        return -1; 
+    } 
+   
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
+        printf("\nConnection Failed \n"); 
+        return -1; 
+    } 
+    send(sock , request, strlen(request) , 0 ); 
+    int i = 0; 
+    read(sock, buffer, 14);
+    for(;buffer[i]!='\r';++i);
+    
+    std::string str_code;
+    for(int j = 9; j<i;++j){
+        str_code.push_back(buffer[j]);
+    };
+    int code = stoi(str_code);
+    printf("Status code => %d\n", code); 
+
+    return code;
 }
 
 int* parse_url(std::string url){
