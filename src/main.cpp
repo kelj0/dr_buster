@@ -1,36 +1,44 @@
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
+#include <netdb.h>
 #include <unistd.h> 
 #include <string> 
 #include <cstring>
 
 #include <pybind11/pybind11.h>
 
-int get_code(std::string host, int port, std::string path){
+int get_code(const std::string host, int port, std::string path){
     // <summary>
     // makes GET request to the host:port/path and returns status code
     // </summary>
     int sock = 0; 
     struct sockaddr_in serv_addr; 
     char buffer[14] = {0}; 
-    const char* request = "GET / HTTP/1.1\r\nHost:kelj0.com\r\n\r\n";
+    std::string ip;
+    const char* request = "GET /"+path+" HTTP/1.1\r\nHost:"+host+"\r\n\r\n";
+
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
         printf("\n Socket creation error \n"); 
         return -1; 
     } 
    
     serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(80); 
-    if(inet_pton(AF_INET, "46.101.220.126", &serv_addr.sin_addr)<=0) { 
-        printf("\nInvalid address/Address not supported \n"); 
-        return -1; 
+    serv_addr.sin_port = htons(80); // TODO add https support
+    if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <=0 ) { 
+        printf("\nInvalid address or you entered hostname and not IP! I'll convert it\n");
+        std::string ip = inet_ntoa(**(in_addr**)gethostbyname(host.c_str())->h_addr_list);
+        if(inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) { 
+            printf("Failed to convert %s to IP\n", host.c_str());
+        }else{
+            printf("Coverted %s to %s\n", host.c_str(), ip.c_str());
+        }
     } 
    
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
         printf("\nConnection Failed \n"); 
         return -1; 
     } 
-    send(sock , request, strlen(request) , 0 ); 
+    send(sock, request, strlen(request), 0); 
     int i = 0; 
     read(sock, buffer, 14);
     for(;buffer[i]!='\r';++i);
