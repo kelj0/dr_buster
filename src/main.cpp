@@ -53,11 +53,23 @@ int get_code(const std::string host, int port, std::string path){
     return code;
 }
 
-int* parse_url(std::string url){
+str::string* parse_url(std::string url){
     // <summary>
     // parses given url and returns a pointer to the array of host, port and path
     // </summary>
-    return NULL;
+    std::string host = "";
+    int port = 0;
+    std::string path = "";
+    try {
+        std::string tmp = url.substr(url.find("//")+2, url.length());
+        host = tmp.substr(0, tmp.find(":"));
+        port = stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
+        path = tmp.substr(tmp.find("/")+1, tmp.length());
+    } catch (...) { 
+        return -1;
+    }
+    str::string ret[3] = { host.c_str(), std::to_string(port), path.c_str() };
+    return ret;
 }
 
 std::string** prepare_wordlists(std::string path){
