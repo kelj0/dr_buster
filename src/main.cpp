@@ -4,6 +4,7 @@
 #include <unistd.h> 
 #include <string> 
 #include <cstring>
+#include <thread>
 
 #include <pybind11/pybind11.h>
 
@@ -53,6 +54,16 @@ int get_code(const std::string host, int port, std::string path){
     return code;
 }
 
+int get_cpu_cores() {
+    // <summary>
+    // returns number of cores in integer
+    // </summary>
+    printf("Getting number of cores..\n");
+    const int cores = std::thread::hardware_concurrency();
+    printf("Detected %d cores on this system\n");
+    return cores;
+}
+
 str::string* parse_url(std::string url){
     // <summary>
     // parses given url and returns a pointer to the array of host, port and path
@@ -89,8 +100,13 @@ int scan_host(std::string host, std::string port, std::string* wordlist, int pro
 
 int start_scan(std::string url, std::string wordlist_path) {
     try {
+        std::string* url = parse_url(url);
+        std::string host = url[0];
+        int port = url[1];
+        std::string path = url[2];
+
         std::ofstream report;
-        report.open ("cpp_generated_report.txt");
+        report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
         report.close();
     } catch (...) {
