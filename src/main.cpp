@@ -5,6 +5,8 @@
 #include <string> 
 #include <cstring>
 #include <thread>
+#include <vector>
+#include <fstream>
 
 #include <pybind11/pybind11.h>
 
@@ -83,12 +85,46 @@ str::string* parse_url(std::string url){
     return ret;
 }
 
-std::string** prepare_wordlists(std::string path){
+std::vector<std::vector<std::string>> prepare_wordlists(std::string path){
     // <summary>
-    // loads words from the wordlists in array of string arrays where number of 
-    // string arrays depends on a CPU cores
+    // loads words from the wordlists in vector<vector<string>> where number of 
+    // vectors in vector depends on a CPU cores
     // </summary>
-    return NULL;
+    int processes_count = 0;
+    if (get_cpu_cores() <= 4){
+        processes_count = 32;
+    } else {
+        processes_count = 64;
+    }
+    std::ifstream file(path);
+    std::vector<std::vector<std::string>> wordlists(processes_count);
+    std::vector<std::string> wordlist;
+    if (file.is_open()){
+        std::string line;
+        while(std::getline(file, line)) {
+             if (line.size() > 0) {
+                 wordlist.push_back(line);
+             }
+        }
+        file.close();
+    } else {
+        printf("ERR: Cant open wordlist!\n");
+        return 0;
+    }
+    int words_per_process = int(wordlist.size()/processes_count);
+    printf("Loading wordlist with %d paths\n", wordlist.size());
+    int offset = 0;
+    for (int i = 0; i < processes_count; ++i) {
+        if (i == processes_count-1){
+            wordlists[i] = std::vector<std::string>(wordlist.begin() + offset, wordlist.end()); 
+        } else {
+            wordlists[i] = std::vector<std::string>(wordlist.begin() + offset, wordlist.begin() + (offset+words_per_process)); 
+        }
+        offset += words_per_process;
+    }
+    printf("Prepared %d words per process, and %d processes in total\n", words_per_process, wordlists.size());
+    printf("%d words per process\n", words_per_process);
+    return wordlists;
 }
 
 int scan_host(std::string host, std::string port, std::string* wordlist, int process_id, std::string path){
