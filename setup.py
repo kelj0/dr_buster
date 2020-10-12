@@ -58,6 +58,8 @@ class CMakeBuild(build_ext):
                                                               self.distribution.get_version())
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
+        print(cmake_args)
+        print(build_args)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
@@ -70,14 +72,16 @@ kwargs = dict(
     author_email='kegljevickarlo@protonmail.com',
     description='Web path finder',
     long_description='',
-    #ext_modules=[CMakeExtension('dr_buster._core')],
+    ext_modules=[CMakeExtension('dr_buster._core')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     packages=['dr_buster']
 )
 
 try:
-    setup(**kwargs)        
+    print("RUNNING SETUP")
+    setup(**kwargs)     
+    print("COMPILED CPP!")
 except CalledProcessError:
     print('Failed to build extension!')
     del kwargs['ext_modules']
