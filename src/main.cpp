@@ -10,7 +10,7 @@
 
 #include <pybind11/pybind11.h>
 
-int get_code(const std::string host, int port, std::string path){
+int get_code(const std::string host, int port, std::string path) {
     // <summary>
     // makes GET request to the host:port/path and returns status code
     // </summary>
@@ -66,7 +66,7 @@ int get_cpu_cores() {
     return cores;
 }
 
-str::string* parse_url(std::string url){
+std::string* parse_url(std::string url) {
     // <summary>
     // parses given url and returns a pointer to the array of host, port and path
     // </summary>
@@ -85,7 +85,7 @@ str::string* parse_url(std::string url){
     return ret;
 }
 
-std::vector<std::vector<std::string>> prepare_wordlists(std::string path){
+std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
     // <summary>
     // loads words from the wordlists in vector<vector<string>> where number of 
     // vectors in vector depends on a CPU cores
@@ -127,11 +127,34 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path){
     return wordlists;
 }
 
-int scan_host(std::string host, std::string port, std::string* wordlist, int process_id, std::string path){
+std::vector<std::vector<std::string>> scan_host(std::string host, int port, std::string path, 
+        std::vector<std::string> wordlist, int process_id) {
     // <summary>
-    // scans host word by word from the wordlist using get_code function on each word and yields findings
+    // scans host word by word from the wordlist using get_code function on each word and yield findings
     // </summary>
-    return NULL;
+    if(path.back() == '/') {
+        path.pop_back();
+    }
+    if(path.at(0) == '/'){
+        path.erase(path[0]);
+    }
+    std::vector<std::vector<std::string>> ret;
+    for(std::string word : wordlist) {
+        if(word.at(0) != '/'){
+            word = "/" + word;
+        }
+        int code = get_code(host, port, path+word);
+        if(code != 404) {
+            ret.push_back(
+                    std::vector<std::string> {
+                        host + ":" + std::stoi(port) + "/" + path + word , 
+                        std::stoi(code)}
+                    );
+            printf(host + ":" + std::stoi(port) + "/" + path + word);
+            printf(" returned %s!\n", std::stoi(code));
+        }
+    }
+    return ret;
 }
 
 int start_scan(std::string url, std::string wordlist_path) {
@@ -140,10 +163,16 @@ int start_scan(std::string url, std::string wordlist_path) {
         std::string host = url[0];
         int port = url[1];
         std::string path = url[2];
-
-        std::ofstream report;
+        std::vector<std::vector<std::string> wordlists = prepare_wordlists(wordlist_path);
+        std::vector<std::vector<std::string> findings = scan_host(host, port, path, wordlists[0], 1);
+        
+        std::ofstream report; 
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
+        
+        for(std::vector<std::string> finding : findings) {
+            report << finding[0] << " " << finding[1] << std::endl;
+        }
         report.close();
     } catch (...) {
         return 1;
