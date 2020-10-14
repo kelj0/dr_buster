@@ -79,9 +79,7 @@ kwargs = dict(
 )
 
 try:
-    print("RUNNING SETUP")
     setup(**kwargs)     
-    print("COMPILED CPP!")
 except CalledProcessError:
     print('Failed to build extension!')
     del kwargs['ext_modules']

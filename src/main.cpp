@@ -18,7 +18,7 @@ int get_code(const std::string host, int port, std::string path) {
     struct sockaddr_in serv_addr; 
     char buffer[14] = {0}; 
     std::string ip;
-    const char* request = "GET /"+path+" HTTP/1.1\r\nHost:"+host+"\r\n\r\n";
+    const char* request = "GET /" + path + " HTTP/1.1\r\nHost:" + host + "\r\n\r\n";
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
         printf("\n Socket creation error \n"); 
@@ -66,7 +66,7 @@ int get_cpu_cores() {
     return cores;
 }
 
-std::string* parse_url(std::string url) {
+std::vector<std::string> parse_url(std::string url) {
     // <summary>
     // parses given url and returns a pointer to the array of host, port and path
     // </summary>
@@ -79,10 +79,9 @@ std::string* parse_url(std::string url) {
         port = stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
         path = tmp.substr(tmp.find("/")+1, tmp.length());
     } catch (...) { 
-        return -1;
+        return NULL;
     }
-    str::string ret[3] = { host.c_str(), std::to_string(port), path.c_str() };
-    return ret;
+    return std::vector<std::string>(host.c_str(), std::to_string(port), path.c_str());
 }
 
 std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
@@ -109,7 +108,7 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
         file.close();
     } else {
         printf("ERR: Cant open wordlist!\n");
-        return 0;
+        return std::vector<std::vector<std::string>>();
     }
     int words_per_process = int(wordlist.size()/processes_count);
     printf("Loading wordlist with %d paths\n", wordlist.size());
@@ -147,11 +146,11 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
         if(code != 404) {
             ret.push_back(
                     std::vector<std::string> {
-                        host + ":" + std::stoi(port) + "/" + path + word , 
-                        std::stoi(code)}
+                        host + ":" + std::to_string(port) + "/" + path + word , 
+                        std::to_string(code)}
                     );
-            printf(host + ":" + std::stoi(port) + "/" + path + word);
-            printf(" returned %s!\n", std::stoi(code));
+            printf("%s:%d/%s%s",host, port, path, word);
+            printf(" returned %d!\n", code);
         }
     }
     return ret;
@@ -159,12 +158,13 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
 
 int start_scan(std::string url, std::string wordlist_path) {
     try {
-        std::string* url = parse_url(url);
-        std::string host = url[0];
-        int port = url[1];
-        std::string path = url[2];
-        std::vector<std::vector<std::string> wordlists = prepare_wordlists(wordlist_path);
-        std::vector<std::vector<std::string> findings = scan_host(host, port, path, wordlists[0], 1);
+        printf("TEST TEST TEST TEST!\n");
+        std::vector<std::string> parsed_url = parse_url(url);
+        std::string host = parsed_url[0].c_str();
+        int port = std::stoi(parse_url[1]);
+        std::string path = parse_url[2].c_str();
+        std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
+        std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
         
         std::ofstream report; 
         report.open("cpp_generated_report.txt");
@@ -175,6 +175,7 @@ int start_scan(std::string url, std::string wordlist_path) {
         }
         report.close();
     } catch (...) {
+        printf("EXCEPTION!\n");
         return 1;
     }
 
