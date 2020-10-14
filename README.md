@@ -1,4 +1,7 @@
 # dr.buster
+
+### IMPORTANT: the project is currently in the phase of rewriting the core part of the code from Python to C++
+
 Simple, yet effective web path finder with Python API and C++ core.
 
 ## Getting started
