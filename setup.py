@@ -84,3 +84,4 @@ except CalledProcessError:
     print('Failed to build extension!')
     del kwargs['ext_modules']
     setup(**kwargs)
+

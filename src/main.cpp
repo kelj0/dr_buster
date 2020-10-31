@@ -3,11 +3,10 @@
 #include <netdb.h>
 #include <unistd.h> 
 #include <string> 
-#include <cstring>
 #include <thread>
 #include <vector>
 #include <fstream>
-
+#include <iostream>
 #include <pybind11/pybind11.h>
 
 int get_code(const std::string host, int port, std::string path) {
@@ -18,30 +17,30 @@ int get_code(const std::string host, int port, std::string path) {
     struct sockaddr_in serv_addr; 
     char buffer[14] = {0}; 
     std::string ip;
-    const char* request = "GET /" + path + " HTTP/1.1\r\nHost:" + host + "\r\n\r\n";
+    const std::string request = "GET /" + path + " HTTP/1.1\r\nHost:" + host + "\r\n\r\n";
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
-        printf("\n Socket creation error \n"); 
+        std::cout << "\n Socket creation error \n"; 
         return -1; 
     } 
    
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(80); // TODO add https support
     if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <=0 ) { 
-        printf("\nInvalid address or you entered hostname and not IP! I'll convert it\n");
+        std::cout << "\nInvalid address or you entered hostname and not IP! I'll convert it\n";
         std::string ip = inet_ntoa(**(in_addr**)gethostbyname(host.c_str())->h_addr_list);
         if(inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) { 
-            printf("Failed to convert %s to IP\n", host.c_str());
+            std::cout << "Failed to convert " << host << " to IP\n";
         }else{
-            printf("Coverted %s to %s\n", host.c_str(), ip.c_str());
+            std::cout << "Converted " << host << " to " << ip << std::endl;
         }
     } 
    
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
-        printf("\nConnection Failed \n"); 
+        std::cout << "\nConnection Failed \n";
         return -1; 
     } 
-    send(sock, request, strlen(request), 0); 
+    send(sock, request.c_str(), request.size(), 0); 
     int i = 0; 
     read(sock, buffer, 14);
     for(;buffer[i]!='\r';++i);
@@ -50,8 +49,8 @@ int get_code(const std::string host, int port, std::string path) {
     for(int j = 9; j<i;++j){
         str_code.push_back(buffer[j]);
     };
-    int code = stoi(str_code);
-    printf("Status code => %d\n", code); 
+    int code = std::stoi(str_code);
+    std::cout << "Status code => " << code << std::endl; 
 
     return code;
 }
@@ -60,9 +59,9 @@ int get_cpu_cores() {
     // <summary>
     // returns number of cores in integer
     // </summary>
-    printf("Getting number of cores..\n");
+    std::cout << "Getting number of cores..\n";
     const int cores = std::thread::hardware_concurrency();
-    printf("Detected %d cores on this system\n");
+    std::cout << "Detected " << cores << " cores on this system\n";
     return cores;
 }
 
@@ -76,12 +75,12 @@ std::vector<std::string> parse_url(std::string url) {
     try {
         std::string tmp = url.substr(url.find("//")+2, url.length());
         host = tmp.substr(0, tmp.find(":"));
-        port = stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
+        port = std::stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
         path = tmp.substr(tmp.find("/")+1, tmp.length());
     } catch (...) { 
-        return NULL;
+        return std::vector<std::string>();
     }
-    return std::vector<std::string>(host.c_str(), std::to_string(port), path.c_str());
+    return std::vector<std::string> { host, std::to_string(port), path };
 }
 
 std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
@@ -107,11 +106,11 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
         }
         file.close();
     } else {
-        printf("ERR: Cant open wordlist!\n");
+        std::cout << "ERR: Cant open wordlist!\n";
         return std::vector<std::vector<std::string>>();
     }
     int words_per_process = int(wordlist.size()/processes_count);
-    printf("Loading wordlist with %d paths\n", wordlist.size());
+    std::cout << "Loading wordlist with " << wordlist.size() << " paths\n";
     int offset = 0;
     for (int i = 0; i < processes_count; ++i) {
         if (i == processes_count-1){
@@ -121,8 +120,8 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
         }
         offset += words_per_process;
     }
-    printf("Prepared %d words per process, and %d processes in total\n", words_per_process, wordlists.size());
-    printf("%d words per process\n", words_per_process);
+    std::cout << "Prepared " << words_per_process << " words per process, and " << wordlists.size() << " processes in total\n";
+    std::cout << words_per_process << " words per process\n";
     return wordlists;
 }
 
@@ -149,8 +148,7 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
                         host + ":" + std::to_string(port) + "/" + path + word , 
                         std::to_string(code)}
                     );
-            printf("%s:%d/%s%s",host, port, path, word);
-            printf(" returned %d!\n", code);
+            std::cout << host << ":" << port << "/" << path << word << " returned " << code << std::endl;
         }
     }
     return ret;
@@ -158,11 +156,11 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
 
 int start_scan(std::string url, std::string wordlist_path) {
     try {
-        printf("TEST TEST TEST TEST!\n");
+        std::cout << "TEST TEST TEST TEST!\n";
         std::vector<std::string> parsed_url = parse_url(url);
-        std::string host = parsed_url[0].c_str();
+        std::string host = std::string(parsed_url[0]);
         int port = std::stoi(parse_url[1]);
-        std::string path = parse_url[2].c_str();
+        std::string path = std::string(parse_url[2]);
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
         std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
         
@@ -175,7 +173,7 @@ int start_scan(std::string url, std::string wordlist_path) {
         }
         report.close();
     } catch (...) {
-        printf("EXCEPTION!\n");
+        std::cout << "EXCEPTION!\n";
         return 1;
     }
 
