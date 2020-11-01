@@ -149,9 +149,10 @@ def write_to_report(finding):
         f.write(finding)
 
 try:
+    print("Importing C++")
     from ._core import start_scan
-    #log("imported c++ module")
+    print("Imported")
 except ImportError:
-    #log("error importing cpp module! falling back to python version...")
+    print("Failed to import C++ core, importing core.py instead!")
     pass
 

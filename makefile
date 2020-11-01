@@ -17,3 +17,6 @@ clean:
 	-rm *.so
 	-rm *.py[cod]
 	-rm *.egg-info
+
+kelj0:
+	g++ -O3 -Werror -Wall -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` -I /usr/include/python3.7 -I . src/main.cpp  -o dr_buster/_core -L. -Wl,-rpath,.

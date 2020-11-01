@@ -23,7 +23,6 @@ int get_code(const std::string host, int port, std::string path) {
         std::cout << "\n Socket creation error \n"; 
         return -1; 
     } 
-   
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(80); // TODO add https support
     if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <=0 ) { 
@@ -35,7 +34,6 @@ int get_code(const std::string host, int port, std::string path) {
             std::cout << "Converted " << host << " to " << ip << std::endl;
         }
     } 
-   
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
         std::cout << "\nConnection Failed \n";
         return -1; 
@@ -75,7 +73,7 @@ std::vector<std::string> parse_url(std::string url) {
     try {
         std::string tmp = url.substr(url.find("//")+2, url.length());
         host = tmp.substr(0, tmp.find(":"));
-        port = std::stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
+        port = stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
         path = tmp.substr(tmp.find("/")+1, tmp.length());
     } catch (...) { 
         return std::vector<std::string>();
@@ -158,9 +156,9 @@ int start_scan(std::string url, std::string wordlist_path) {
     try {
         std::cout << "TEST TEST TEST TEST!\n";
         std::vector<std::string> parsed_url = parse_url(url);
-        std::string host = std::string(parsed_url[0]);
-        int port = std::stoi(parse_url[1]);
-        std::string path = std::string(parse_url[2]);
+        std::string host = parsed_url[0];
+        int port = std::stoi(parsed_url[1]);
+        std::string path = parsed_url[2];
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
         std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
         
