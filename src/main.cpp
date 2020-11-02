@@ -171,14 +171,12 @@ int start_scan(std::string url, std::string wordlist_path) {
         if (parsed_url.size() != 3) {
             return -1;
         }
-        std::cout << "host: " << parsed_url[0] << " port: " << parsed_url[1] << " path: " << parsed_url[2] << std::endl;
         std::string host = parsed_url[0];
         int port = std::stoi(parsed_url[1]);
         std::string path = parsed_url[2];
-        std::cout << "Done with scans, writing report" << std::endl; 
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
         std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
-        std::cout << "Done with scans, writing report" << std::endl; 
+        std::cout << "Done with scans, writing a report" << std::endl; 
         std::ofstream report; 
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
