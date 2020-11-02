@@ -9,6 +9,7 @@
 #include <iostream>
 #include <pybind11/pybind11.h>
 
+
 int get_code(const std::string host, int port, std::string path) {
     // <summary>
     // makes GET request to the host:port/path and returns status code
@@ -71,11 +72,21 @@ std::vector<std::string> parse_url(std::string url) {
     int port = 0;
     std::string path = "";
     try {
-        std::string tmp = url.substr(url.find("//")+2, url.length());
+        std::string tmp = url.substr(url.find("//") + 2, url.length());
         host = tmp.substr(0, tmp.find(":"));
-        port = stoi(tmp.substr(tmp.find(":")+1, tmp.find("/")));
-        path = tmp.substr(tmp.find("/")+1, tmp.length());
+        if(tmp.substr(tmp.find(":") + 1, tmp.length()).find(":") < tmp.substr(tmp.find(":") + 1, tmp.length()).length()){
+            port = stoi(tmp.substr(tmp.find(":") + 1, tmp.find("/")));
+        } else {
+            port = 80;
+        }
+        std::string tmp_path = tmp.substr(tmp.find("//") + 1, tmp.length());
+        if (tmp_path.find("/") < tmp_path.length()) { 
+            path = tmp_path.substr(tmp_path.find("/") + 1, tmp_path.length());
+        } else {
+            path = "";
+        }
     } catch (...) { 
+        std::cout << "ERR: at parsing url" << std::endl;
         return std::vector<std::string>();
     }
     return std::vector<std::string> { host, std::to_string(port), path };
@@ -86,6 +97,7 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
     // loads words from the wordlists in vector<vector<string>> where number of 
     // vectors in vector depends on a CPU cores
     // </summary>
+    std::cout << "Preparing wordlists.." << std::endl; 
     int processes_count = 0;
     if (get_cpu_cores() <= 4){
         processes_count = 32;
@@ -154,14 +166,19 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
 
 int start_scan(std::string url, std::string wordlist_path) {
     try {
-        std::cout << "TEST TEST TEST TEST!\n";
+        std::cout << "Initiating the scan" << std::endl;
         std::vector<std::string> parsed_url = parse_url(url);
+        if (parsed_url.size() != 3) {
+            return -1;
+        }
+        std::cout << "host: " << parsed_url[0] << " port: " << parsed_url[1] << " path: " << parsed_url[2] << std::endl;
         std::string host = parsed_url[0];
         int port = std::stoi(parsed_url[1]);
         std::string path = parsed_url[2];
+        std::cout << "Done with scans, writing report" << std::endl; 
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
         std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
-        
+        std::cout << "Done with scans, writing report" << std::endl; 
         std::ofstream report; 
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
@@ -172,12 +189,11 @@ int start_scan(std::string url, std::string wordlist_path) {
         report.close();
     } catch (...) {
         std::cout << "EXCEPTION!\n";
-        return 1;
+        return -1;
     }
 
     return 0;
 }
-
 
 namespace py = pybind11;
 
