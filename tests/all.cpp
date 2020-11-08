@@ -7,9 +7,6 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <pybind11/pybind11.h>
-
-int NOT_FOUND_CODE = 404;
 
 int get_code(const std::string host, int port, std::string path) {
     // <summary>
@@ -89,17 +86,6 @@ std::vector<std::string> parse_url(std::string url) {
     } catch (...) { 
         std::cout << "ERR: at parsing url" << std::endl;
         return std::vector<std::string>();
-    }
-    std::cout << "Initial GET to see if host is up" << std::endl; 
-    int c = get_code(host, port, ".");
-    if (c != -1) {
-        std::cout << "[UP] => got " << std::to_string(c) << std::endl;
-        std::cout << "Requesting path /aaacabbbb2 to set NOT_FOUND_CODE." << std::endl;
-        std::cout << "Some sites dont have 404 for not found, but rather retirect to the homepage if path doesnt exist" << std::endl;
-        NOT_FOUND_CODE = get_code(host, port, "aaacabbbb2");
-        std::cout << "NOT_FOUND_CODE is "  << std::to_string(NOT_FOUND_CODE) << std::endl;
-    } else {
-        std::cout << "Host is not up." << std::endl;
     }
     return std::vector<std::string> { host, std::to_string(port), path };
 }
@@ -183,12 +169,14 @@ int start_scan(std::string url, std::string wordlist_path) {
         if (parsed_url.size() != 3) {
             return -1;
         }
+        std::cout << "host: " << parsed_url[0] << " port: " << parsed_url[1] << " path: " << parsed_url[2] << std::endl;
         std::string host = parsed_url[0];
         int port = std::stoi(parsed_url[1]);
         std::string path = parsed_url[2];
+        std::cout << "Done with scans, writing report" << std::endl; 
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
         std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
-        std::cout << "Done with scans, writing a report" << std::endl; 
+        std::cout << "Done with scans, writing report" << std::endl; 
         std::ofstream report; 
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
@@ -205,14 +193,16 @@ int start_scan(std::string url, std::string wordlist_path) {
     return 0;
 }
 
-namespace py = pybind11;
 
-PYBIND11_MODULE(_core, m) {
-    m.def("start_scan", &start_scan, "Scan host");
+int main(int argc, char *argv[]){
+    if (argc != 3) {
+        std::cout << "Pls args" << std::endl;
+        return -1;
+    }
 
-#ifdef VERSION_INFO
-    m.attr("__version__") = VERSION_INFO;
-#else
-    m.attr("__version__") = "dev";
-#endif
+
+    start_scan(argv[1], argv[2]);
+
+    return 0;
 }
+
