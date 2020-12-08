@@ -108,6 +108,7 @@ terms and conditions of this license.
 
 ## TODO:
 * [-] - create C++ version of dr.buster
+* [ ] - make more user friendly approach to scan (see if you get alot of "bad request 400" errors, and then ask user if he doesnt want to see those)
 * [ ] - output reports to cwd
 * [ ] - argsparse option to specify where to output reports
 
