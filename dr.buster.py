@@ -21,7 +21,6 @@ def get_code(host, port, path):
     global SSL_SUPPORTED
     s = socket(AF_INET, SOCK_STREAM)
     response = None
-    
     if path.startswith("/"):
         path = path.lstrip('/')
     
@@ -90,7 +89,7 @@ def parse_url(url):
     print("[UP] => got %s" % (c,))
     print("Requesting path /aaaabbbb2 to set NOT_FOUND_CODE.")
     print("Some sites dont have 404 for not found, but rather retirect to the homepage if path doesnt exist")
-    NOT_FOUND_CODE = get_code(host, port, "aaaabbbb2")
+    NOT_FOUND_CODE = get_code(host, port, path + "/aaaabbbb2")
     print("NOT_FOUND_CODE is %s" % (NOT_FOUND_CODE,))
     return (host, port, path)
 
@@ -127,10 +126,10 @@ def scan_host(host, port, wordlist, process_id=None, path=""):
         except Exception:
             print(host,port,path,word)
             exit(1)
-        if code != NOT_FOUND_CODE:
-            print("%s:%s%s/%s returned [%s]!                \r" 
+        if code != NOT_FOUND_CODE and code != 400:
+            print("%s:%s/%s%s returned [%s]!                \r" 
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
-            finding = ("%s:%s%s/%s [%s]\n"
+            finding = ("%s:%s/%s%s [%s]\n"
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             write_to_report(finding)
 
