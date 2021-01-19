@@ -62,7 +62,7 @@ and run dr.buster in another terminal
 ## TODO:
 * [x] - add argsparse
 * [x] - add support for dirbusting on specific path
-* [ ] - create C++ version of dr.buster
+* [ ] - create C++ version of dr.buster -> https://github.com/kelj0/dr_buster/tree/migration_to_cpp
 
 ##### DISCLAMER: I AM NOT RESPONSIBLE FOR ANY ACTIONS DONE WITH THIS SCRIPT, USE IT ONLY IF YOU HAVE PERMISSION
 
