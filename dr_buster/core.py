@@ -4,6 +4,7 @@ from ssl import wrap_socket, SSLError, PROTOCOL_TLSv1_2
 from datetime import datetime
 from os.path import exists
 from multiprocessing import cpu_count, Process
+import traceback
 
 PROCESSES_COUNT = 32 if cpu_count() <= 4 else 64
 WORD_LISTS = []
