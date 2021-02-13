@@ -1,5 +1,0 @@
-/home/kelj0/github/dr_buster/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/kelj0/github/dr_buster/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/kelj0/github/dr_buster/cmake-build-debug/CMakeFiles/_core.dir
-/home/kelj0/github/dr_buster/cmake-build-debug/pybind11/CMakeFiles/rebuild_cache.dir
-/home/kelj0/github/dr_buster/cmake-build-debug/pybind11/CMakeFiles/edit_cache.dir
