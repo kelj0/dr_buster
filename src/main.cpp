@@ -9,23 +9,35 @@
 #include <iostream>
 
 int NOT_FOUND_CODE = 404;
+bool converted_to_ip = false;
+char *target_ip;
+
+int get_cpu_cores() {
+    // <summary>
+    // returns number of cores in integer
+    // </summary>
+    std::cout << "Getting number of cores..." << std::endl;
+    const int cores = std::thread::hardware_concurrency();
+    std::cout << "Detected " << cores << " cores on this system" << std::endl;
+    return cores;
+}
 
 int get_code(const std::string host, int port, std::string path) {
     // <summary>
     // makes GET request to the host:port/path and returns status code
     // </summary>
     int sock = 0;
-    struct sockaddr_in serv_addr = {0};
     char buffer[14] = {0};
     const std::string request = "GET /" + path + " HTTP/1.1\r\nHost:" + host + "\r\n\r\n";
+    struct sockaddr_in serv_addr = {0};
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         std::cout << "\n Socket creation error \n";
         return -1;
     }
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(80); // TODO add https support
-    if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <=0 ) {
+    serv_addr.sin_port = htons(port); // TODO add https support
+    if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <= 0 && !converted_to_ip) {
         addrinfo hints = {};
         hints.ai_flags = AI_CANONNAME;
         hints.ai_family = AF_UNSPEC;
@@ -37,9 +49,13 @@ int get_code(const std::string host, int port, std::string path) {
             exit(-1);
         } else {
             inet_aton(reinterpret_cast<const char *>(res->ai_addr), &serv_addr.sin_addr);
+            target_ip = inet_ntoa(serv_addr.sin_addr);
+            converted_to_ip = true;
             freeaddrinfo(res);
         }
         std::cout << "Converted " << host << " to " << inet_ntoa(serv_addr.sin_addr) << std::endl;
+    } else {
+        inet_pton(AF_INET, target_ip, &serv_addr.sin_addr);
     }
 
 
@@ -50,26 +66,15 @@ int get_code(const std::string host, int port, std::string path) {
     send(sock, request.c_str(), request.size(), 0);
     int i = 0;
     read(sock, buffer, 14);
-    for(;buffer[i]!='\r';++i);
 
     std::string str_code;
-    for(int j = 9; j<i;++j){
+    for(int j = 9; j<12;++j){
         str_code.push_back(buffer[j]);
     };
     int code = std::stoi(str_code);
     std::cout << "Status code => " << code << std::endl;
 
     return code;
-}
-
-int get_cpu_cores() {
-    // <summary>
-    // returns number of cores in integer
-    // </summary>
-    std::cout << "Getting number of cores..." << std::endl;
-    const int cores = std::thread::hardware_concurrency();
-    std::cout << "Detected " << cores << " cores on this system" << std::endl;
-    return cores;
 }
 
 std::vector<std::string> parse_url(std::string url) {
@@ -142,7 +147,8 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
         }
         file.close();
     } else {
-        std::cerr << "ERR: Cant open wordlist!\n";
+        std::cerr << "ERR: Cant open a wordlist!\n";
+        file.close();
         exit(-1);
     }
     int words_per_process = int(wordlist.size()/processes_count);
@@ -157,7 +163,6 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
         offset += words_per_process;
     }
     std::cout << "Prepared " << words_per_process << " words per process, and " << wordlists.size() << " processes in total" << std::endl;
-    std::cout << words_per_process << " words per process" << std::endl;
     return wordlists;
 }
 
@@ -166,25 +171,23 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
     // <summary>
     // scans host word by word from the wordlist using get_code function on each word and yield findings
     // </summary>
-    if(path.back() == '/') {
+    if (path.back() == '/') {
         path.pop_back();
     }
-    if(path.at(0) == '/'){
+    if ( path.length() != 0 && path.at(0) == '/'){
         path.erase(path[0]);
     }
     std::vector<std::vector<std::string>> ret;
-    for(std::string word : wordlist) {
-        if(word.at(0) != '/'){
-            word = "/" + word;
-        }
+    for (std::string word : wordlist) {
         int code = get_code(host, port, path+word);
-        if(code != 404) {
+        if (code != 404) {
             ret.push_back(
                     std::vector<std::string> {
-                            host + ":" + std::to_string(port) + "/" + path + word ,
-                            std::to_string(code)}
+                        host + ":" + std::to_string(port) + path + "/" + word ,
+                        std::to_string(code)
+                    }
             );
-            std::cout << host << ":" << port << "/" << path << word << " returned " << code << std::endl;
+            std::cout << "http://" << host << ":" << port <<  path << "/" << word << " returned " << code << std::endl;
         }
     }
     return ret;
@@ -205,7 +208,7 @@ int start_scan(std::string url, std::string wordlist_path) {
         report << url << std::endl << wordlist_path << std::endl;
 
         for(std::vector<std::string> finding : findings) {
-            report << finding[0] << " " << finding[1] << std::endl;
+            report << "http://" << finding[0] << " [" << finding[1] << "]" << std::endl;
         }
         report.close();
     } catch (std::exception &e) {
@@ -234,12 +237,13 @@ void print_banner() {
 
 int main(int argc, char* argv[]) {
     print_banner();
-    /*if (argc != 3){
+    if (argc != 3){
         print_help();
         return -1;
-    }*/
-    start_scan("localhost", "argv[2]"); // testing
+    }
+    start_scan(argv[1], argv[2]);
 
     return 0;
 }
+
 
