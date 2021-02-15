@@ -7,6 +7,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <chrono>
 
 int NOT_FOUND_CODE = 404;
 bool converted_to_ip = false;
@@ -33,6 +34,7 @@ int get_code(const std::string host, int port, std::string path) {
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         std::cout << "\n Socket creation error \n";
+        exit(-1);
         return -1;
     }
     serv_addr.sin_family = AF_INET;
@@ -66,14 +68,12 @@ int get_code(const std::string host, int port, std::string path) {
     send(sock, request.c_str(), request.size(), 0);
     int i = 0;
     read(sock, buffer, 14);
-
+    close(sock);
     std::string str_code;
     for(int j = 9; j<12;++j){
         str_code.push_back(buffer[j]);
     };
     int code = std::stoi(str_code);
-    std::cout << "Status code => " << code << std::endl;
-
     return code;
 }
 
@@ -166,8 +166,7 @@ std::vector<std::vector<std::string>> prepare_wordlists(std::string path) {
     return wordlists;
 }
 
-std::vector<std::vector<std::string>> scan_host(std::string host, int port, std::string path,
-                                                std::vector<std::string> wordlist, int process_id) {
+void scan_host(std::string host, int port, std::string path, std::vector<std::string> wordlist, std::ostream &report) {
     // <summary>
     // scans host word by word from the wordlist using get_code function on each word and yield findings
     // </summary>
@@ -177,20 +176,13 @@ std::vector<std::vector<std::string>> scan_host(std::string host, int port, std:
     if ( path.length() != 0 && path.at(0) == '/'){
         path.erase(path[0]);
     }
-    std::vector<std::vector<std::string>> ret;
     for (std::string word : wordlist) {
-        int code = get_code(host, port, path+word);
+        int code = get_code(host, port, path + word);
         if (code != 404) {
-            ret.push_back(
-                    std::vector<std::string> {
-                        host + ":" + std::to_string(port) + path + "/" + word ,
-                        std::to_string(code)
-                    }
-            );
-            std::cout << "http://" << host << ":" << port <<  path << "/" << word << " returned " << code << std::endl;
+            std::cout << "http://" << host << ":" << port << path << "/" << word << " returned " << code << std::endl;
+            report << "http://" << host << ":" << port << path << "/" << word << " [" << code << "]" << std::endl;
         }
     }
-    return ret;
 }
 
 int start_scan(std::string url, std::string wordlist_path) {
@@ -201,15 +193,13 @@ int start_scan(std::string url, std::string wordlist_path) {
         int port = std::stoi(parsed_url[1]);
         std::string path = parsed_url[2];
         std::vector<std::vector<std::string>> wordlists = prepare_wordlists(wordlist_path);
-        std::vector<std::vector<std::string>> findings = scan_host(host, port, path, wordlists[0], 1);
-        std::cout << "Done with scans, writing a report" << std::endl;
         std::ofstream report;
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
-
-        for(std::vector<std::string> finding : findings) {
-            report << "http://" << finding[0] << " [" << finding[1] << "]" << std::endl;
+        for (std::vector<std::string> wordlist: wordlists) {
+            scan_host(host, port, path, wordlist, report);
         }
+        std::cout << "Done with scans, writing a report" << std::endl;
         report.close();
     } catch (std::exception &e) {
         std::cerr << "ERR: " << e.what();
@@ -236,14 +226,15 @@ void print_banner() {
 }
 
 int main(int argc, char* argv[]) {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     print_banner();
     if (argc != 3){
         print_help();
         return -1;
     }
     start_scan(argv[1], argv[2]);
-
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     return 0;
 }
-
 
