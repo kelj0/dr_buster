@@ -4,15 +4,21 @@
 #include <unistd.h>
 #include <string>
 #include <thread>
+#include <mutex>
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <condition_variable>
 
 int NOT_FOUND_CODE = 404;
 bool converted_to_ip = false;
-char *target_ip;
+const char *target_ip = "";
 int SYSTEM_THREADS;
+
+std::mutex m;
+std::condition_variable cv;
+bool ready = false;
 
 int get_code(const std::string& host, int port, const std::string& path) {
     // <summary>
@@ -29,7 +35,19 @@ int get_code(const std::string& host, int port, const std::string& path) {
     }
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port); // TODO add https support
-    if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <= 0 && !converted_to_ip) {
+    int valid_ip = 1;
+    if (!converted_to_ip) {
+        converted_to_ip = true;
+        valid_ip = inet_pton(AF_INET, host.c_str(), &(serv_addr.sin_addr));
+        if (valid_ip == 1) {
+            target_ip = (const char *) host.c_str();
+            inet_pton(AF_INET, target_ip, &(serv_addr.sin_addr));
+        }
+    } else {
+        inet_pton(AF_INET, target_ip, &(serv_addr.sin_addr));
+    }
+
+    if (valid_ip == 0) {
         addrinfo hints = {};
         hints.ai_flags = AI_CANONNAME;
         hints.ai_family = AF_UNSPEC;
@@ -42,14 +60,14 @@ int get_code(const std::string& host, int port, const std::string& path) {
         } else {
             inet_aton(reinterpret_cast<const char *>(res->ai_addr), &serv_addr.sin_addr);
             target_ip = inet_ntoa(serv_addr.sin_addr);
-            converted_to_ip = true;
             freeaddrinfo(res);
         }
         std::cout << "Converted " << host << " to " << inet_ntoa(serv_addr.sin_addr) << std::endl;
-    } else {
-        inet_pton(AF_INET, target_ip, &serv_addr.sin_addr);
-    }
 
+    } else if (valid_ip == -1) {
+        std::cout << "Invalid IPv4 IP provided." << std::endl;
+        exit(-1);
+    }
 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         std::cout << "\nConnection Failed" << std::endl;
@@ -166,6 +184,10 @@ void scan_host(const std::string& host, int port, std::string path, const std::v
             report << "http://" << host << ":" << port << path << "/" << word << " [" << code << "]" << std::endl;
         }
     }
+
+    std::unique_lock<std::mutex> lk(m);
+    ready = true;
+    std::notify_all_at_thread_exit(cv, std::move(lk));
 }
 
 int start_scan(const std::string& url, const std::string& wordlist_path) {
@@ -173,6 +195,9 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
         std::cout << "Initiating the scan" << std::endl;
         std::cout << "Getting number of threads available..." << std::endl;
         SYSTEM_THREADS = std::thread::hardware_concurrency();
+        if (!SYSTEM_THREADS) {
+            SYSTEM_THREADS = 2;
+        }
         std::cout << "Detected " << SYSTEM_THREADS << " available threads on this system" << std::endl;
         std::vector<std::string> parsed_url = parse_url(url);
         std::string host = parsed_url[0];
@@ -190,6 +215,8 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
         for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
             v_threads[i].join();
         }
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait(lk, []{ return ready;});
         std::cout << "Done with scans, writing a report" << std::endl;
         report.close();
     } catch (std::exception &e) {
@@ -228,5 +255,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     return 0;
 }
-
 
