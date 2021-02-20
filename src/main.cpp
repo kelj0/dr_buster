@@ -16,10 +16,6 @@ bool converted_to_ip = false;
 const char *target_ip = "";
 int SYSTEM_THREADS;
 
-std::mutex m;
-std::condition_variable cv;
-bool ready = false;
-
 int get_code(const std::string& host, int port, const std::string& path) {
     // <summary>
     // makes GET request to the host:port/path and returns status code
@@ -167,7 +163,8 @@ std::vector<std::vector<std::string>> prepare_wordlists(const std::string& path)
     return wordlists;
 }
 
-void scan_host(const std::string& host, int port, std::string path, const std::vector<std::string>& wordlist, std::ostream &report) {
+template <typename T1, typename T2>
+void scan_host(const std::string host, int port, std::string path, const std::vector<std::string> wordlist, std::ostream &report, bool &ready, T1 m, T2 cv) {
     // <summary>
     // scans host word by word from the wordlist using get_code function on each word and yield findings
     // </summary>
@@ -184,10 +181,11 @@ void scan_host(const std::string& host, int port, std::string path, const std::v
             report << "http://" << host << ":" << port << path << "/" << word << " [" << code << "]" << std::endl;
         }
     }
-
-    std::unique_lock<std::mutex> lk(m);
-    ready = true;
-    std::notify_all_at_thread_exit(cv, std::move(lk));
+    if (typeid(*m).name() == typeid(std::mutex).name()) {
+        std::unique_lock<std::mutex> lk(*m);
+        ready = true;
+        std::notify_all_at_thread_exit(*cv, std::move(lk));
+    }
 }
 
 int start_scan(const std::string& url, const std::string& wordlist_path) {
@@ -207,16 +205,50 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
         std::ofstream report;
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
-
         std::vector<std::thread> v_threads(SYSTEM_THREADS);
+        std::mutex m, m2;
+        std::condition_variable cv, cv2;
+        bool ready = false;
+        std::mutex* ptr_m = &m;
+        std::mutex* ptr_m2 = &m2;
+        std::condition_variable* ptr_cv = &cv;
+        std::condition_variable* ptr_cv2 = &cv2;
+
         for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
-            v_threads[i] = std::thread(scan_host, host,port, path, wordlists[i], std::ref(report));
+            if (i == SYSTEM_THREADS - 1) {
+                v_threads[i] = std::thread(
+                        static_cast<void (*)(
+                                const std::basic_string<char>,
+                                int,
+                                std::basic_string<char>,
+                                const std::vector<std::basic_string<char>>,
+                                std::basic_ostream<char>&,
+                                bool &,
+                                std::mutex*,
+                                std::condition_variable*)>
+                        (&scan_host), host, port, path, wordlists[i], std::ref(report),
+                        std::ref(ready), ptr_m, ptr_cv);
+            } else {
+                v_threads[i] = std::thread(
+                        static_cast<void (*)(
+                                const std::basic_string<char>,
+                                int,
+                                std::basic_string<char>,
+                                const std::vector<std::basic_string<char>>,
+                                std::basic_ostream<char>&,
+                                bool &,
+                                std::mutex*,
+                                std::condition_variable*)>
+                        (&scan_host), host, port, path, wordlists[i], std::ref(report),
+                        std::ref(ready), ptr_m2, ptr_cv2);
+            }
+
         }
         for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
             v_threads[i].join();
         }
         std::unique_lock<std::mutex> lk(m);
-        cv.wait(lk, []{ return ready;});
+        cv.wait(lk, [ready]{ return ready;});
         std::cout << "Done with scans, writing a report" << std::endl;
         report.close();
     } catch (std::exception &e) {
@@ -255,4 +287,3 @@ int main(int argc, char* argv[]) {
     std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     return 0;
 }
-
