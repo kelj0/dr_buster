@@ -242,6 +242,14 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
                         (&scan_host), host, port, path, wordlists[i], std::ref(report),
                         std::ref(ready), ptr_m2, ptr_cv2);
             }
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(i, &cpuset);
+            int rc = pthread_setaffinity_np(v_threads[i].native_handle(),
+                                            sizeof(cpu_set_t), &cpuset);
+            if (rc != 0) {
+                std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+            }
 
         }
         for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
@@ -287,3 +295,4 @@ int main(int argc, char* argv[]) {
     std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     return 0;
 }
+
