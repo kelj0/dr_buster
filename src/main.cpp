@@ -12,9 +12,9 @@
 #include <condition_variable>
 
 int NOT_FOUND_CODE = 404;
-bool converted_to_ip = false;
 const char *target_ip = "";
 int SYSTEM_THREADS;
+bool supra_mode = false;
 
 int get_code(const std::string& host, int port, const std::string& path) {
     // <summary>
@@ -31,40 +31,7 @@ int get_code(const std::string& host, int port, const std::string& path) {
     }
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port); // TODO add https support
-    int valid_ip = 1;
-    if (!converted_to_ip) {
-        converted_to_ip = true;
-        valid_ip = inet_pton(AF_INET, host.c_str(), &(serv_addr.sin_addr));
-        if (valid_ip == 1) {
-            target_ip = (const char *) host.c_str();
-            inet_pton(AF_INET, target_ip, &(serv_addr.sin_addr));
-        }
-    } else {
-        inet_pton(AF_INET, target_ip, &(serv_addr.sin_addr));
-    }
-
-    if (valid_ip == 0) {
-        addrinfo hints = {};
-        hints.ai_flags = AI_CANONNAME;
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-        addrinfo *res;
-        if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0) {
-            std::cerr << "ERR: unable to resolve " << host << " to IP" << std::endl;
-            exit(-1);
-        } else {
-            inet_aton(reinterpret_cast<const char *>(res->ai_addr), &serv_addr.sin_addr);
-            target_ip = inet_ntoa(serv_addr.sin_addr);
-            freeaddrinfo(res);
-        }
-        std::cout << "Converted " << host << " to " << inet_ntoa(serv_addr.sin_addr) << std::endl;
-
-    } else if (valid_ip == -1) {
-        std::cout << "Invalid IPv4 IP provided." << std::endl;
-        exit(-1);
-    }
-
+    inet_pton(AF_INET, target_ip, &(serv_addr.sin_addr));
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         std::cout << "\nConnection Failed" << std::endl;
         return -1;
@@ -111,6 +78,19 @@ std::vector<std::string> parse_url(std::string url) {
     } catch (std::exception &e) {
         std::cerr << "ERR: at parsing url [" << e.what() << "]" << std::endl;
         exit(-1);
+    }
+
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, host.c_str(), &(sa.sin_addr));
+    if (result == 0) {
+        struct hostent *he = gethostbyname(host.c_str());
+        if (he == NULL) {
+            std::cerr << "ERR: failed to convert [http://" << host << "] to a valid IPv4 address" << std::endl;
+        }
+        target_ip = inet_ntoa(*(struct in_addr *) he->h_addr_list[0]);
+        std::cout << "Converted " << host << " to " << target_ip << std::endl;
+    } else {
+        target_ip = host.c_str();
     }
     std::cout << "Initial GET to see if host is up" << std::endl;
     int c = get_code(host, port, "");
@@ -159,7 +139,10 @@ std::vector<std::vector<std::string>> prepare_wordlists(const std::string& path)
         }
         offset += words_per_process;
     }
-    std::cout << "Prepared " << words_per_process << " words per process, and " << wordlists.size() << " processes in total" << std::endl;
+    if (supra_mode) {
+        std::cout << "Prepared " << words_per_process << " words per thread, and " << wordlists.size()
+                  << " threads in total" << std::endl;
+    }
     return wordlists;
 }
 
@@ -188,6 +171,25 @@ void scan_host(const std::string host, int port, std::string path, const std::ve
     }
 }
 
+void scan_host(const std::string host, int port, std::string path, const std::vector<std::string> wordlist, std::ostream &report) {
+    // <summary>
+    // scans host word by word from the wordlist using get_code function on each word and yield findings
+    // </summary>
+    if (path.back() == '/') {
+        path.pop_back();
+    }
+    if ( path.length() != 0 && path.at(0) == '/'){
+        path.erase(path[0]);
+    }
+    for (const std::string& word : wordlist) {
+        int code = get_code(host, port, path + word);
+        if (code != 404) {
+            std::cout << "http://" << host << ":" << port << path << "/" << word << " returned " << code << std::endl;
+            report << "http://" << host << ":" << port << path << "/" << word << " [" << code << "]" << std::endl;
+        }
+    }
+}
+
 int start_scan(const std::string& url, const std::string& wordlist_path) {
     try {
         std::cout << "Initiating the scan" << std::endl;
@@ -196,7 +198,9 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
         if (!SYSTEM_THREADS) {
             SYSTEM_THREADS = 2;
         }
-        std::cout << "Detected " << SYSTEM_THREADS << " available threads on this system" << std::endl;
+        if (supra_mode) {
+            std::cout << "Detected " << SYSTEM_THREADS << " available threads on this system" << std::endl;
+        }
         std::vector<std::string> parsed_url = parse_url(url);
         std::string host = parsed_url[0];
         int port = std::stoi(parsed_url[1]);
@@ -205,58 +209,64 @@ int start_scan(const std::string& url, const std::string& wordlist_path) {
         std::ofstream report;
         report.open("cpp_generated_report.txt");
         report << url << std::endl << wordlist_path << std::endl;
-        std::vector<std::thread> v_threads(SYSTEM_THREADS);
-        std::mutex m, m2;
-        std::condition_variable cv, cv2;
-        bool ready = false;
-        std::mutex* ptr_m = &m;
-        std::mutex* ptr_m2 = &m2;
-        std::condition_variable* ptr_cv = &cv;
-        std::condition_variable* ptr_cv2 = &cv2;
+        if (supra_mode) {
+            std::vector<std::thread> v_threads(SYSTEM_THREADS);
+            std::mutex m, m2;
+            std::condition_variable cv, cv2;
+            bool ready = false;
+            std::mutex *ptr_m = &m;
+            std::mutex *ptr_m2 = &m2;
+            std::condition_variable *ptr_cv = &cv;
+            std::condition_variable *ptr_cv2 = &cv2;
 
-        for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
-            if (i == SYSTEM_THREADS - 1) {
-                v_threads[i] = std::thread(
-                        static_cast<void (*)(
-                                const std::basic_string<char>,
-                                int,
-                                std::basic_string<char>,
-                                const std::vector<std::basic_string<char>>,
-                                std::basic_ostream<char>&,
-                                bool &,
-                                std::mutex*,
-                                std::condition_variable*)>
-                        (&scan_host), host, port, path, wordlists[i], std::ref(report),
-                        std::ref(ready), ptr_m, ptr_cv);
-            } else {
-                v_threads[i] = std::thread(
-                        static_cast<void (*)(
-                                const std::basic_string<char>,
-                                int,
-                                std::basic_string<char>,
-                                const std::vector<std::basic_string<char>>,
-                                std::basic_ostream<char>&,
-                                bool &,
-                                std::mutex*,
-                                std::condition_variable*)>
-                        (&scan_host), host, port, path, wordlists[i], std::ref(report),
-                        std::ref(ready), ptr_m2, ptr_cv2);
-            }
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(i, &cpuset);
-            int rc = pthread_setaffinity_np(v_threads[i].native_handle(),
-                                            sizeof(cpu_set_t), &cpuset);
-            if (rc != 0) {
-                std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
-            }
+            for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
+                if (i == SYSTEM_THREADS - 1) {
+                    v_threads[i] = std::thread(
+                            static_cast<void (*)(
+                                    const std::basic_string<char>,
+                                    int,
+                                    std::basic_string<char>,
+                                    const std::vector<std::basic_string<char>>,
+                                    std::basic_ostream<char> &,
+                                    bool &,
+                                    std::mutex *,
+                                    std::condition_variable *)>
+                            (&scan_host), host, port, path, wordlists[i], std::ref(report),
+                            std::ref(ready), ptr_m, ptr_cv);
+                } else {
+                    v_threads[i] = std::thread(
+                            static_cast<void (*)(
+                                    const std::basic_string<char>,
+                                    int,
+                                    std::basic_string<char>,
+                                    const std::vector<std::basic_string<char>>,
+                                    std::basic_ostream<char> &,
+                                    bool &,
+                                    std::mutex *,
+                                    std::condition_variable *)>
+                            (&scan_host), host, port, path, wordlists[i], std::ref(report),
+                            std::ref(ready), ptr_m2, ptr_cv2);
+                }
+                cpu_set_t cpuset;
+                CPU_ZERO(&cpuset);
+                CPU_SET(i, &cpuset);
+                int rc = pthread_setaffinity_np(v_threads[i].native_handle(),
+                                                sizeof(cpu_set_t), &cpuset);
+                if (rc != 0) {
+                    std::cerr << "Error setting thread affinity!" << std::endl;
+                }
 
+            }
+            for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
+                v_threads[i].join();
+            }
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait(lk, [ready] { return ready; });
+        } else {
+            for (std::vector<std::string> wordlist: wordlists) {
+                scan_host(host, port, path, wordlist, report);
+            }
         }
-        for (unsigned i = 0; i < SYSTEM_THREADS; ++i) {
-            v_threads[i].join();
-        }
-        std::unique_lock<std::mutex> lk(m);
-        cv.wait(lk, [ready]{ return ready;});
         std::cout << "Done with scans, writing a report" << std::endl;
         report.close();
     } catch (std::exception &e) {
@@ -271,6 +281,10 @@ void print_help() {
     std::cout << "run: ./dr_buster <URL> <PATH/TO/WORDLIST>" << std::endl;
     std::cout << "\tURL:  URL/IP of server you want to scan" << std::endl;
     std::cout << "\tPATH: path to wordlist you want to use for a scan" << std::endl;
+    std::cout << "====================================================" << std::endl;
+    std::cout << "OPTIONAL: --supra" << std::endl;
+    std::cout << "\t enables uber fast mode, utilizing optimal number of threads USE WITH CAUTION!" << std::endl;
+    std::cout << "\t I suggest you to use supra mode only on local tests." << std::endl;
 }
 
 void print_banner() {
@@ -286,10 +300,15 @@ void print_banner() {
 int main(int argc, char* argv[]) {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     print_banner();
-    if (argc != 3){
+    if (argc < 3){
         print_help();
         return -1;
     }
+    if (argc == 4 && argv[3] != "--supra") {
+        std::cout << "Achtung! Warning! Enabling the supra mode. " << std::endl;
+        supra_mode = true;
+    }
+
     start_scan(argv[1], argv[2]);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
