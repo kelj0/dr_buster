@@ -21,7 +21,7 @@ int get_code(const std::string& host, int port, const std::string& path) {
     // makes GET request to the host:port/path and returns status code
     // </summary>
     int sock;
-    char buffer[14] = {0};
+    char buffer[12] = {0};
     const std::string request = "GET /" + path + " HTTP/1.1\r\nHost:" + host + "\r\n\r\n";
     struct sockaddr_in serv_addr = {0};
 
@@ -37,13 +37,9 @@ int get_code(const std::string& host, int port, const std::string& path) {
         return -1;
     }
     send(sock, request.c_str(), request.size(), 0);
-    read(sock, buffer, 14);
+    read(sock, buffer, 12);
     close(sock);
-    std::string str_code;
-    for(int j = 9; j<12;++j){
-        str_code.push_back(buffer[j]);
-    }
-    int code = std::stoi(str_code);
+    int code = std::stoi(std::string() + buffer[9] + buffer[10] + buffer[11]);
     return code;
 }
 
@@ -304,12 +300,24 @@ int main(int argc, char* argv[]) {
         print_help();
         return -1;
     }
-    if (argc == 4 && argv[3] != "--supra") {
-        std::cout << "Achtung! Warning! Enabling the supra mode. " << std::endl;
-        supra_mode = true;
+    
+    if (argc == 4) {
+        std::cout << std::string(argv[3]) << std::endl;
+        if (argv[3] == "--supra") {
+            std::cout << "TEST" << std::endl;
+        }
+        if (std::string(argv[3]) == "--supra") {
+            std::cout << "Achtung! Warning! Enabling the supra mode. " << std::endl;
+            supra_mode = true;
+            start_scan(argv[1], argv[2]);
+        } else if (std::string(argv[1]) == "--supra") {
+            std::cout << "Achtung! Warning! Enabling the supra mode. " << std::endl;
+            supra_mode = true;
+            start_scan(argv[2], argv[3]);
+        }    
+    } else {
+        start_scan(argv[1], argv[2]);
     }
-
-    start_scan(argv[1], argv[2]);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Runtime = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     return 0;
