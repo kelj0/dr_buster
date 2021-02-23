@@ -1,12 +1,14 @@
 # dr.buster
 Simple, yet effective web path finder implemented with multiprocessing in Python
 
-### Module usage
-To use it as module please rename dr.buster.py to dr_buster.py or something that wont be problematic to python interpreter
-Then you can
+### Install
+```
+pip3 install dr_buster
+```
 
+### Module usage
 ```py
-from dr_buster import start_scan
+from dr_buster.core import start_scan
 
 start_scan(url, wordlist_path)
 ```
@@ -14,7 +16,7 @@ You will have a report generated after program finishes and you can parse it eas
 
 ### CLI usage
 ```
-$ python3 dr.buster.py https://example.com /home/user/wordlist.txt
+$ python3 -m dr_buster https://example.com /home/user/wordlist.txt
 
 starts scan on example.com with wordlist wordlist.txt
 and generates report dr.buster.report.$datetime$
