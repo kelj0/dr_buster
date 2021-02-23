@@ -151,7 +151,8 @@ def write_to_report(finding):
     with open(fname, "a") as f:
         f.write(finding)
 
-if __name__ == '__main__':
+def main():
+    # not pythonic.
     p = argparse.ArgumentParser()
     p.add_argument("url", help="Url of web page you want to scan")
     p.add_argument("wordlist", help="Path to wordlist")
@@ -167,5 +168,4 @@ if __name__ == '__main__':
     end_time = time()
     print()
     print("\nScanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
-
 
