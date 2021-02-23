@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-
-import itertools, argparse
 from socket import socket, gaierror, AF_INET, SOCK_STREAM
 from ssl import wrap_socket, SSLError, PROTOCOL_TLSv1_2
-from time import time
 from datetime import datetime
-from sys import exit, argv
 from os.path import exists
 from multiprocessing import cpu_count, Process
+import traceback
 
 PROCESSES_COUNT = 32 if cpu_count() <= 4 else 64
 WORD_LISTS = []
@@ -151,21 +148,10 @@ def write_to_report(finding):
     with open(fname, "a") as f:
         f.write(finding)
 
-if __name__ == '__main__':
-    p = argparse.ArgumentParser()
-    p.add_argument("url", help="Url of web page you want to scan")
-    p.add_argument("wordlist", help="Path to wordlist")
-    if len(argv) != 3:
-        p.print_help()
-        exit(1)
-    a = p.parse_args()
-    URL=a.url
-    WORDLIST_PATH=a.wordlist
-    print("Starting Dr.buster..\nURL: %s \nWORDLIST: %s" % (URL, WORDLIST_PATH))
-    start_time = time()
-    start_scan(URL, WORDLIST_PATH)
-    end_time = time()
-    print()
-    print("\nScanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
-
+try:
+    from ._core import start_scan
+except ImportError as e:
+    print(e)
+    print("Failed to import C++ core, importing core.py instead!")
+    pass
 
