@@ -6,6 +6,7 @@ from ssl import wrap_socket, SSLError, PROTOCOL_TLSv1_2
 from time import time
 from datetime import datetime
 from sys import exit
+import os
 from os.path import exists
 from multiprocessing import cpu_count, Process
 
@@ -14,7 +15,6 @@ WORD_LISTS = []
 WORDLIST_PATH = ""
 URL = ""
 SSL_SUPPORTED = True
-TIME = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
 NOT_FOUND_CODE = 404
 
 def get_code(host, port, path):
@@ -119,7 +119,7 @@ def prepare_wordlists(path):
             WORD_LISTS.append(lines[start:start+words_per_process])
         start+=words_per_process
 
-def scan_host(host, port, wordlist, process_id=None, path=""):
+def scan_host(host, port, wordlist, runtime, process_id=None, path=""):
     for word in wordlist:
         try:
             code = get_code(host, port, path+word)
@@ -131,33 +131,47 @@ def scan_host(host, port, wordlist, process_id=None, path=""):
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             finding = ("%s:%s/%s%s [%s]\n"
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
-            write_to_report(finding)
+            write_to_report(finding, runtime)
 
-def start_scan(url, wordlist_path):
+def start_scan(url, wordlist_path, runtime):
     global WORD_LISTS
     print("Starting scan on %s.." % (url,))
     host, port, path = parse_url(url)
     prepare_wordlists(wordlist_path)
     procs = []
     for n, wordlist in enumerate(WORD_LISTS):
-        procs.append(Process(target=scan_host, args=(host, port, wordlist, n+1, path)))
+        procs.append(Process(target=scan_host, args=(host, port, wordlist, runtime, n+1, path)))
     for p in procs:
         p.start()
     for p in procs:
         p.join()
 
-def write_to_report(finding):
-    fname = "./dr.buster.report."+TIME
+def write_to_report(finding, runtime):
+    fname = "./dr.buster.report."+runtime
     with open(fname, "a") as f:
         f.write(finding)
 
-def main(url, wordlist_path):
+def main(url, wordlist_path, cli_run=True):
+    '''
+        returns a path to the result of a scan
+        @url: url that you want to scan, it can be ip or an url to root, or to some specific path
+        @wordlist_path: provide a path to a wordlist that you want to use to scan that path
+        @cli_run: boolean, if True dr buster prints out results and findings, if False, runs silently 
+    '''
+    
     URL = url
     WORDLIST_PATH = wordlist_path
-    print("Starting Dr.buster..\nURL: %s \nWORDLIST: %s" % (URL, WORDLIST_PATH))
+    runtime = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    if cli_run:
+        print("Starting Dr.buster..\nURL: %s \nWORDLIST: %s" % (URL, WORDLIST_PATH))
     start_time = time()
-    start_scan(URL, WORDLIST_PATH)
+    start_scan(URL, WORDLIST_PATH, runtime)
     end_time = time()
-    print()
-    print("\nScanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
+    if cli_run:
+        print()
+        print("\nScanned %s paths in %s s." % (len(list(itertools.chain.from_iterable(WORD_LISTS))), end_time-start_time))
+    
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    
+    return os.path.join(dir_path, f"dr.buster.report.{runtime}")
 
