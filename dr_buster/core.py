@@ -139,6 +139,8 @@ def start_scan(url, wordlist_path, runtime, results_path=None):
     host, port, path = parse_url(url)
     prepare_wordlists(wordlist_path)
     procs = []
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
     if results_path is None:
         results_path = os.path.join(dir_path, f"dr.buster.report.{runtime}.txt")
     for n, wordlist in enumerate(WORD_LISTS):
