@@ -151,12 +151,7 @@ def start_scan(url, wordlist_path, runtime, results_path=None):
         p.join()
 
 def write_to_report(finding, runtime, results_path=None):
-    if results_path is not None:
-        fname = os.path.join(results_path, f"dr.buster.report.{runtime}.txt")
-    else:
-        fname = f"./dr.buster.report.{runtime}.txt"
-
-    with open(fname, "a") as f:
+    with open(results_path, "a") as f:
         f.write(finding)
 
 def main(url, wordlist_path, cli_run=True):
