@@ -119,7 +119,7 @@ def prepare_wordlists(path):
             WORD_LISTS.append(lines[start:start+words_per_process])
         start+=words_per_process
 
-def scan_host(host, port, wordlist, runtime, process_id=None, path=""):
+def scan_host(host, port, wordlist, runtime, results_path, process_id=None, path=""):
     for word in wordlist:
         try:
             code = get_code(host, port, path+word)
@@ -131,23 +131,29 @@ def scan_host(host, port, wordlist, runtime, process_id=None, path=""):
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
             finding = ("%s:%s/%s%s [%s]\n"
                     % ("http://"+host if not SSL_SUPPORTED else "https://"+host, port, path, word, code))
-            write_to_report(finding, runtime)
+            write_to_report(finding, runtime, results_path)
 
-def start_scan(url, wordlist_path, runtime):
+def start_scan(url, wordlist_path, runtime, results_path=None):
     global WORD_LISTS
     print("Starting scan on %s.." % (url,))
     host, port, path = parse_url(url)
     prepare_wordlists(wordlist_path)
     procs = []
+    if results_path is None:
+        results_path = os.path.join(dir_path, f"dr.buster.report.{runtime}.txt")
     for n, wordlist in enumerate(WORD_LISTS):
-        procs.append(Process(target=scan_host, args=(host, port, wordlist, runtime, n+1, path)))
+        procs.append(Process(target=scan_host, args=(host, port, wordlist, runtime, results_path, n+1, path)))
     for p in procs:
         p.start()
     for p in procs:
         p.join()
 
-def write_to_report(finding, runtime):
-    fname = "./dr.buster.report."+runtime
+def write_to_report(finding, runtime, results_path=None):
+    if results_path is not None:
+        fname = os.path.join(results_path, f"dr.buster.report.{runtime}.txt")
+    else:
+        fname = f"./dr.buster.report.{runtime}.txt"
+
     with open(fname, "a") as f:
         f.write(finding)
 
@@ -173,5 +179,5 @@ def main(url, wordlist_path, cli_run=True):
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
     
-    return os.path.join(dir_path, f"dr.buster.report.{runtime}")
+    return os.path.join(dir_path, f"dr.buster.report.{runtime}.txt")
 
